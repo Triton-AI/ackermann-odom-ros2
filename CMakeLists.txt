@@ -14,7 +14,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(message_filters REQUIRED)
-find_package(backward_ros REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 set(msg_files
