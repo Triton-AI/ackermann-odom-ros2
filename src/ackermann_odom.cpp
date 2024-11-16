@@ -79,8 +79,8 @@ void AckermannOdom::OdomCallback(
 	// Create a new odometry message
 	auto odom = nav_msgs::msg::Odometry();
 	odom.header.stamp = this->get_clock()->now();
-	odom.header.frame_id = "f1tenth_1";
-	odom.child_frame_id = "f1tenth_1";
+	odom.header.frame_id = "odom";
+	odom.child_frame_id = "ego_racecar/base_footprint";
 
 	// Compute the velocity
 	rclcpp::Time current_time = this->get_clock()->now();
