@@ -34,6 +34,8 @@ class AckermannOdom : public rclcpp::Node {
   std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::JointState, 
     sensor_msgs::msg::JointState,ackermann_odom::msg::Float32Stamped>>> sync_;
 
+  double conversion_ratio;
+  double encoder_resolution;
   double wheel_radius;
   double wheel_base;
   double track_width;
