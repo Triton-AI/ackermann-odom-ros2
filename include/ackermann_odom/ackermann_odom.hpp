@@ -1,5 +1,5 @@
-#ifndef ACKERMANN_ODOM__ACKERMANN_ODOM_NODE_HPP_
-#define ACKERMANN_ODOM__ACKERMANN_ODOM_NODE_HPP_
+#ifndef ACKERMANN_ODOM__ACKERMANN_ODOM_HPP_
+#define ACKERMANN_ODOM__ACKERMANN_ODOM_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
@@ -13,6 +13,7 @@
 class AckermannOdom : public rclcpp::Node {
  public:
   AckermannOdom();
+  AckermannOdom(double wheel_radius, double wheel_base, double track_width, double conversion_ratio, double encoder_resolution);
 
  private:
   void steeringCallback(
@@ -30,8 +31,13 @@ class AckermannOdom : public rclcpp::Node {
   message_filters::Subscriber<sensor_msgs::msg::JointState> left_encoder_sub_;
   message_filters::Subscriber<sensor_msgs::msg::JointState> right_encoder_sub_;
   message_filters::Subscriber<ackermann_odom::msg::Float32Stamped> steering_stamped_sub_;
-  std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::JointState, sensor_msgs::msg::JointState,ackermann_odom::msg::Float32Stamped>>> sync_;
-    
+  std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::JointState, 
+    sensor_msgs::msg::JointState,ackermann_odom::msg::Float32Stamped>>> sync_;
+
+  double wheel_radius;
+  double wheel_base;
+  double track_width;
+
   double prev_left_encoder_count;
   double prev_right_encoder_count;
   double x_;
@@ -45,4 +51,4 @@ class AckermannOdom : public rclcpp::Node {
   rclcpp::Time last_time_;
 };
 
-#endif // ACKERMANN_ODOM__ACKERMANN_ODOM_NODE_HPP_
+#endif // ACKERMANN_ODOM__ACKERMANN_ODOM_HPP_
