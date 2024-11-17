@@ -17,8 +17,8 @@ AckermannOdom::AckermannOdom() : Node("ackermann_odom_node") {
 	this->wheel_radius = 0.0590;
 	this->wheel_base = 0.3240; // L
 	this->track_width = 0.2360; // w
-  this->conversion_ratio = 120.0;
-  this->encoder_resolution = 16.0;
+	this->conversion_ratio = 120.0;
+	this->encoder_resolution = 16.0;
 
 	publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
 	publisher_steering_stamped_ =
@@ -79,8 +79,8 @@ void AckermannOdom::OdomCallback(
 	// Create a new odometry message
 	auto odom = nav_msgs::msg::Odometry();
 	odom.header.stamp = this->get_clock()->now();
-	odom.header.frame_id = "f1tenth_1";
-	odom.child_frame_id = "f1tenth_1";
+	odom.header.frame_id = "odom";
+	odom.child_frame_id = "ego_racecar/base_footprint";
 
 	// Compute the velocity
 	rclcpp::Time current_time = this->get_clock()->now();
