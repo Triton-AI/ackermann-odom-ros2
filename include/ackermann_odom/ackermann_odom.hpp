@@ -16,11 +16,18 @@ class AckermannOdom : public rclcpp::Node {
 
  private:
   static constexpr double MAX_VELOCITY = 22.0;
+  static constexpr double VELOCITY_DECAY_THRESHOLD = 0.01;  // m/s
+  static constexpr double VELOCITY_THRESHOLD = 0.9; // m/s
+  static constexpr double VELOCITY_DECAY_RATE = 0.95; // Exponential decay factor
+  static constexpr double POSITION_DEAD_ZONE = 0.01; // m
+  static constexpr double BETA = 0.15; // Position smoothing factor
+
   static constexpr double MAX_STEERING_ANGLE = M_PI / 6;
   static constexpr double SMALL_ANGLE_THRESHOLD = 1e-6;
-  static constexpr double MAX_POSITION_CHANGE = 1.0;
+  static constexpr double MAX_POSITION_CHANGE = 5.0;
   static constexpr double MAX_ENCODER_DIFF = 1000.0;
-  static constexpr double ALPHA = 0.1;
+  static constexpr double POSITION_VELOCITY_RESET_THRESHOLD = 0.01; // m/s
+  static constexpr double ALPHA = 0.5; // Velocity smoothing factor
 
   void declare_parameters();
   void initialize_parameters();

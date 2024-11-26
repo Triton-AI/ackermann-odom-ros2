@@ -116,20 +116,38 @@ void AckermannOdom::updateOdometry(
         return;
     }
 
-    double left_encoder_rotations = left_encoder_diff * conversion_ratio_ / (encoder_resolution_);
-    double right_encoder_rotations = right_encoder_diff * conversion_ratio_/ ( encoder_resolution_);
+    // double left_encoder_rotations = left_encoder_diff  / conversion_ratio_ / (encoder_resolution_);
+    // double right_encoder_rotations = right_encoder_diff / conversion_ratio_/ ( encoder_resolution_);
+	double left_encoder_rotations = left_encoder_diff / (encoder_resolution_);
+    double right_encoder_rotations = right_encoder_diff / ( encoder_resolution_);
 
     double v_left = 2 * M_PI * wheel_radius_ * left_encoder_rotations / dt;
     double v_right = 2 * M_PI * wheel_radius_ * right_encoder_rotations / dt;
     
     double v = std::clamp((v_left + v_right) / 2.0, -MAX_VELOCITY, MAX_VELOCITY);
-    v = ALPHA * v + (1 - ALPHA) * previous_v_;
-    previous_v_ = v;
+    if (std::abs(v) < VELOCITY_DECAY_THRESHOLD) {
+		if (std::abs(v) < std::abs(previous_v_)) {
+			v = previous_v_ * VELOCITY_DECAY_RATE;  // Exponential decay
+		}
+	}
+	v = ALPHA * v + (1 - ALPHA) * previous_v_;
+    
+	previous_v_ = v;
 
     double delta = steering_msg->data * MAX_STEERING_ANGLE;
     double omega = v * std::tan(delta) / wheelbase_;
 
     double dx, dy, dth;
+	
+	// Smooth omega using a low-pass filter
+    // static double previous_omega = 0.0;
+	// double unsmoothed_omega = v * std::tan(delta) / wheelbase_;
+    // double ALPHA_OMEGA = 0.3;  // Smoothing factor for angular velocity
+    // omega = ALPHA_OMEGA * unsmoothed_omega + (1 - ALPHA_OMEGA) * previous_omega;
+
+    // Update previous value
+    // previous_omega = omega;
+
     if (std::abs(omega * dt) < SMALL_ANGLE_THRESHOLD) {
         dx = v * dt;
         dy = 0;
@@ -139,13 +157,32 @@ void AckermannOdom::updateOdometry(
         dx = (v / omega) * std::sin(dth);
         dy = (v / omega) * (1 - std::cos(dth));
     }
+	// Reset velocity if position changes are very small
+    if (std::abs(dx) < POSITION_VELOCITY_RESET_THRESHOLD && 
+        std::abs(dy) < POSITION_VELOCITY_RESET_THRESHOLD) {
+        v = 0.0;
+        previous_v_ = 0.0;
+        dx = 0.0;
+        dy = 0.0;
+    }
+	// Apply dead-zone filtering
+    dx = (std::abs(dx) < POSITION_DEAD_ZONE) ? 0.0 : dx;
+    dy = (std::abs(dy) < POSITION_DEAD_ZONE) ? 0.0 : dy;
 
-    dx = std::clamp(dx, -MAX_POSITION_CHANGE, MAX_POSITION_CHANGE);
-    dy = std::clamp(dy, -MAX_POSITION_CHANGE, MAX_POSITION_CHANGE);
+	// Calculate new position
+    double new_x = x_ + dx * std::cos(th_) - dy * std::sin(th_);
+    double new_y = y_ + dx * std::sin(th_) + dy * std::cos(th_);
 
-    x_ += dx * std::cos(th_) - dy * std::sin(th_);
-    y_ += dx * std::sin(th_) + dy * std::cos(th_);
+    // dx = std::clamp(dx, -MAX_POSITION_CHANGE, MAX_POSITION_CHANGE);
+    // dy = std::clamp(dy, -MAX_POSITION_CHANGE, MAX_POSITION_CHANGE);
+
+    // Apply complementary filter to position
+    x_ = BETA * new_x + (1 - BETA) * x_;
+    y_ = BETA * new_y + (1 - BETA) * y_;
+    
+	// Normalize theta to prevent drift in orientation
     th_ += dth;
+    th_ = std::atan2(std::sin(th_), std::cos(th_));
     elapsed_time_ += dt;
 
     th_ = std::atan2(std::sin(th_), std::cos(th_));
@@ -153,6 +190,8 @@ void AckermannOdom::updateOdometry(
     prev_left_encoder_count_ = left_msg->position[0];
     prev_right_encoder_count_ = right_msg->position[0];
 
+	RCLCPP_INFO(this->get_logger(), "v_left: %.5f, v_right: %.5f", v_left, v_right);
+	RCLCPP_INFO(this->get_logger(), "dx: %.5f, dy: %.5f, dth: %.5f", dx, dy, dth);
     RCLCPP_INFO(this->get_logger(), 
         "delta: %.5f, omega: %.5f, dth: %.5f, th_: %.5f",
         delta, omega, dth, th_);
