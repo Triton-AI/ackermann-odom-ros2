@@ -15,7 +15,7 @@ class AckermannOdom : public rclcpp::Node {
   AckermannOdom();
 
  private:
-  static constexpr double MAX_VELOCITY = 22.0;
+  static constexpr double MAX_VELOCITY = 22.88; // m/s
   static constexpr double VELOCITY_DECAY_THRESHOLD = 0.01;  // m/s
   static constexpr double VELOCITY_THRESHOLD = 0.9; // m/s
   static constexpr double VELOCITY_DECAY_RATE = 0.95; // Exponential decay factor
