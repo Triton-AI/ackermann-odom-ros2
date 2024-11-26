@@ -124,29 +124,28 @@ void AckermannOdom::updateOdometry(
         return;
     }
 
-    // double left_encoder_rotations = left_encoder_diff  / conversion_ratio_ / (encoder_resolution_);
-    // double right_encoder_rotations = right_encoder_diff / conversion_ratio_/ ( encoder_resolution_);
-	double left_encoder_rotations = left_encoder_diff / (encoder_resolution_);
-    double right_encoder_rotations = right_encoder_diff / ( encoder_resolution_);
+	double left_encoder_rad = left_encoder_diff;
+    double right_encoder_rad = right_encoder_diff;
 
     // Debug Line
     // RCLCPP_INFO(this->get_logger(), "left: %.3f, right: %.3f", 
-    //             left_encoder_rotations, right_encoder_rotations);
+    //             left_encoder_rad, right_encoder_rad);
 
-    double v_left = 2 * M_PI * wheel_radius_ * left_encoder_rotations / dt;
-    double v_right = 2 * M_PI * wheel_radius_ * right_encoder_rotations / dt;
+    double v_left = wheel_radius_ * left_encoder_rad / dt;
+    double v_right = wheel_radius_ * right_encoder_rad / dt;
 
-    RCLCPP_INFO(this->get_logger(), "v_left: %.3f, v_right: %.3f, dt: %.3f", 
-                v_left, v_right, dt);
+    // Debug Line
+    // RCLCPP_INFO(this->get_logger(), "v_left: %.3f, v_right: %.3f, dt: %.3f", 
+    //             v_left, v_right, dt);
     
     // Smoothing Velocity (might not need it)
     double v = std::clamp((v_left + v_right) / 2.0, -MAX_VELOCITY, MAX_VELOCITY);
-    if (std::abs(v) < VELOCITY_DECAY_THRESHOLD) {
-		if (std::abs(v) < std::abs(previous_v_)) {
-			v = previous_v_ * VELOCITY_DECAY_RATE;  // Exponential decay
-		}
-	}
-	v = ALPHA * v + (1 - ALPHA) * previous_v_;
+    // if (std::abs(v) < VELOCITY_DECAY_THRESHOLD) {
+	// 	if (std::abs(v) < std::abs(previous_v_)) {
+	// 		v = previous_v_ * VELOCITY_DECAY_RATE;  // Exponential decay
+	// 	}
+	// }
+	// v = ALPHA * v + (1 - ALPHA) * previous_v_;
     
 	previous_v_ = v;
 
@@ -203,15 +202,15 @@ void AckermannOdom::updateOdometry(
 
     th_ = std::atan2(std::sin(th_), std::cos(th_));
 
-	// RCLCPP_INFO(this->get_logger(), "v_left: %.5f, v_right: %.5f", v_left, v_right);
-	// RCLCPP_INFO(this->get_logger(), "dx: %.5f, dy: %.5f, dth: %.5f", dx, dy, dth);
-    // RCLCPP_INFO(this->get_logger(), 
-    //     "delta: %.5f, omega: %.5f, dth: %.5f, th_: %.5f",
-    //     delta, omega, dth, th_);
+	RCLCPP_INFO(this->get_logger(), "v_left: %.5f, v_right: %.5f", v_left, v_right);
+	RCLCPP_INFO(this->get_logger(), "dx: %.5f, dy: %.5f, dth: %.5f", dx, dy, dth);
+    RCLCPP_INFO(this->get_logger(), 
+        "delta: %.5f, omega: %.5f, dth: %.5f, th_: %.5f",
+        delta, omega, dth, th_);
 
-    // RCLCPP_INFO(this->get_logger(), 
-    //     "Updated pose -> x: %.2f, y: %.2f, th: %.2f, v: %.5f, steering: %.5f", 
-    //     x_, y_, th_, v, delta);
+    RCLCPP_INFO(this->get_logger(), 
+        "Updated pose -> x: %.2f, y: %.2f, th: %.2f, v: %.5f, steering: %.5f", 
+        x_, y_, th_, v, delta);
 }
 
 void AckermannOdom::publishOdometry()
