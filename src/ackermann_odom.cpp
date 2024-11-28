@@ -164,7 +164,8 @@ void AckermannOdom::updateOdometry(
 	previous_v_ = v;
 
     double delta = steering_msg->data * MAX_STEERING_ANGLE;
-    double omega = v * std::tan(delta) / wheelbase_;
+    // double omega = v * std::tan(delta) / wheelbase_;
+    double omega = imu_msg->angular_velocity.z;
 
     double dx, dy, dth;
 	
@@ -211,6 +212,15 @@ void AckermannOdom::updateOdometry(
     
 	// Normalize theta to prevent drift in orientation
     th_ += dth;
+
+    tf2::Quaternion quat_tf;
+    quat_tf.setRPY(0.0, 0.0, th_);
+    quat_tf.normalize();
+    tf2::Matrix3x3 m(quat_tf);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    RCLCPP_INFO(this->get_logger(), "yaw: %.5f", yaw);
+    
     th_ = std::atan2(std::sin(th_), std::cos(th_));
     elapsed_time_ += dt;
 
@@ -240,10 +250,13 @@ void AckermannOdom::publishOdometry()
 
     odom.pose.pose.position.x = x_;
     odom.pose.pose.position.y = y_;
-    odom.pose.pose.orientation.x = 0.0;
-    odom.pose.pose.orientation.y = 0.0;
-    odom.pose.pose.orientation.z = std::sin(th_ / 2.0);
-    odom.pose.pose.orientation.w = std::cos(th_ / 2.0);
+    tf2::Quaternion quat_tf;
+    quat_tf.setRPY(0.0, 0.0, th_);
+    quat_tf.normalize();    
+    odom.pose.pose.orientation.x = quat_tf.getX();
+    odom.pose.pose.orientation.y = quat_tf.getY();
+    odom.pose.pose.orientation.z = quat_tf.getZ();
+    odom.pose.pose.orientation.w = quat_tf.getW();
 
     // Set covariances
     for (int i = 0; i < 36; i++) {

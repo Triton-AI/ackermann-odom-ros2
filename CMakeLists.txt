@@ -9,6 +9,9 @@ find_package(ament_cmake_auto REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -35,7 +38,9 @@ ament_target_dependencies(dummy_steering_publisher rclcpp std_msgs)
 rosidl_target_interfaces(ackermann_odom_node
   ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
-target_link_libraries(ackermann_odom_node "${cpp_typesupport_target}")
+target_link_libraries(ackermann_odom_node
+  "${cpp_typesupport_target}"
+)
 
 install(TARGETS
   ackermann_odom_node
