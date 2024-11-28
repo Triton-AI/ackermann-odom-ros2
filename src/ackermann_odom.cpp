@@ -95,7 +95,7 @@ void AckermannOdom::OdomCallback(
     const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg,
     const sensor_msgs::msg::Imu::ConstSharedPtr& imu_msg)
 {
-    if (!left_msg || !right_msg || !steering_msg) {
+    if (!left_msg || !right_msg || !steering_msg || !imu_msg) {
         RCLCPP_ERROR(this->get_logger(), "Received null message");
         return;
     }
@@ -119,6 +119,7 @@ void AckermannOdom::updateOdometry(
     const sensor_msgs::msg::JointState::ConstSharedPtr& left_msg,
     const sensor_msgs::msg::JointState::ConstSharedPtr& right_msg,
     const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg,
+    const sensor_msgs::msg::Imu::ConstSharedPtr& imu_msg,
     double dt)
 {
     double left_encoder_diff = left_msg->position[0] - prev_left_encoder_count_;

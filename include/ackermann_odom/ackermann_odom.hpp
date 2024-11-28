@@ -47,6 +47,7 @@ class AckermannOdom : public rclcpp::Node {
       const sensor_msgs::msg::JointState::ConstSharedPtr& left_msg,
       const sensor_msgs::msg::JointState::ConstSharedPtr& right_msg,
       const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg,
+      const sensor_msgs::msg::Imu::ConstSharedPtr& imu_msg,
       double dt);
 
   void publishOdometry();
