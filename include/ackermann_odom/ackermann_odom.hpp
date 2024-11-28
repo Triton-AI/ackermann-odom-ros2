@@ -3,6 +3,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/float32.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <message_filters/subscriber.h>
@@ -16,9 +17,10 @@ class AckermannOdom : public rclcpp::Node {
 
  private:
   static constexpr double MAX_VELOCITY = 22.88; // m/s
-  static constexpr double VELOCITY_DECAY_THRESHOLD = 0.01;  // m/s
-  static constexpr double VELOCITY_THRESHOLD = 0.9; // m/s
-  static constexpr double VELOCITY_DECAY_RATE = 0.95; // Exponential decay factor
+//   static constexpr double VELOCITY_DECAY_THRESHOLD = 0.01;  // m/s
+//   static constexpr double VELOCITY_THRESHOLD = 0.9; // m/s
+//   static constexpr double VELOCITY_DECAY_RATE = 0.95; // Exponential decay factor
+//   static constexpr double ALPHA = 0.5; // Velocity smoothing factor
   static constexpr double POSITION_DEAD_ZONE = 0.01; // m
   static constexpr double BETA = 0.15; // Position smoothing factor
 
@@ -27,7 +29,6 @@ class AckermannOdom : public rclcpp::Node {
   static constexpr double MAX_POSITION_CHANGE = 5.0;
   static constexpr double MAX_ENCODER_DIFF = 1000.0;
   static constexpr double POSITION_VELOCITY_RESET_THRESHOLD = 0.01; // m/s
-  static constexpr double ALPHA = 0.5; // Velocity smoothing factor
 
   void declare_parameters();
   void initialize_parameters();
@@ -38,7 +39,8 @@ class AckermannOdom : public rclcpp::Node {
   void OdomCallback(
       const sensor_msgs::msg::JointState::ConstSharedPtr& left_msg,
       const sensor_msgs::msg::JointState::ConstSharedPtr& right_msg,
-      const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg);
+      const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg,
+      const sensor_msgs::msg::Imu::ConstSharedPtr& imu_msg);
 
   void updateOdometry(
       const rclcpp::Time& current_time,
@@ -59,9 +61,12 @@ class AckermannOdom : public rclcpp::Node {
   message_filters::Subscriber<sensor_msgs::msg::JointState> left_encoder_sub_;
   message_filters::Subscriber<sensor_msgs::msg::JointState> right_encoder_sub_;
   message_filters::Subscriber<ackermann_odom::msg::Float32Stamped> steering_stamped_sub_;
+  message_filters::Subscriber<sensor_msgs::msg::Imu> imu_sub_;
   std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<
-      sensor_msgs::msg::JointState, sensor_msgs::msg::JointState,
-      ackermann_odom::msg::Float32Stamped>>> sync_;
+      sensor_msgs::msg::JointState,
+      sensor_msgs::msg::JointState,
+      ackermann_odom::msg::Float32Stamped,
+      sensor_msgs::msg::Imu>>> sync_;
 
   double wheel_radius_, wheelbase_, track_width_, conversion_ratio_, encoder_resolution_;
   double prev_left_encoder_count_, prev_right_encoder_count_;

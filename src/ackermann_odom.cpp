@@ -46,18 +46,30 @@ void AckermannOdom::initialize_publishers_and_subscribers()
     left_encoder_sub_.subscribe(this, "/autodrive/f1tenth_1/left_encoder");
     right_encoder_sub_.subscribe(this, "/autodrive/f1tenth_1/right_encoder");
     steering_stamped_sub_.subscribe(this, "/steering_stamped");
+    imu_sub_.subscribe(this, "/ego_racecar/imu");
 
     sync_ = std::make_shared<message_filters::Synchronizer<
-        message_filters::sync_policies::ApproximateTime<
-            sensor_msgs::msg::JointState, sensor_msgs::msg::JointState,
-            ackermann_odom::msg::Float32Stamped>>>(
-        message_filters::sync_policies::ApproximateTime<
-            sensor_msgs::msg::JointState, sensor_msgs::msg::JointState,
-            ackermann_odom::msg::Float32Stamped>(10),
-        left_encoder_sub_, right_encoder_sub_, steering_stamped_sub_);
+            message_filters::sync_policies::ApproximateTime<
+                sensor_msgs::msg::JointState, 
+                sensor_msgs::msg::JointState,
+                ackermann_odom::msg::Float32Stamped, 
+                sensor_msgs::msg::Imu
+            >
+        >
+    >(
+            message_filters::sync_policies::ApproximateTime<
+                sensor_msgs::msg::JointState, 
+                sensor_msgs::msg::JointState,
+                ackermann_odom::msg::Float32Stamped, 
+                sensor_msgs::msg::Imu>(10),                              
+            left_encoder_sub_, right_encoder_sub_, steering_stamped_sub_, imu_sub_
+);
     sync_->registerCallback(
-        std::bind(&AckermannOdom::OdomCallback, this, std::placeholders::_1,
-                  std::placeholders::_2, std::placeholders::_3));
+        std::bind(&AckermannOdom::OdomCallback, this, 
+                  std::placeholders::_1,
+                  std::placeholders::_2,
+                  std::placeholders::_3,
+                  std::placeholders::_4));
 
     prev_left_encoder_count_ = 0.0;
     prev_right_encoder_count_ = 0.0;
@@ -80,7 +92,8 @@ void AckermannOdom::steeringCallback(const std_msgs::msg::Float32::SharedPtr msg
 void AckermannOdom::OdomCallback(
     const sensor_msgs::msg::JointState::ConstSharedPtr& left_msg,
     const sensor_msgs::msg::JointState::ConstSharedPtr& right_msg,
-    const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg)
+    const ackermann_odom::msg::Float32Stamped::ConstSharedPtr& steering_msg,
+    const sensor_msgs::msg::Imu::ConstSharedPtr& imu_msg)
 {
     if (!left_msg || !right_msg || !steering_msg) {
         RCLCPP_ERROR(this->get_logger(), "Received null message");
