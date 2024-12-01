@@ -76,8 +76,10 @@ class AckermannOdom : public rclcpp::Node {
 
   double wheel_radius_, wheelbase_, track_width_, conversion_ratio_, encoder_resolution_;
   double prev_left_encoder_count_, prev_right_encoder_count_;
-  double elapsed_time_, x_, y_, th_, previous_v_;
+  double elapsed_time_, x_, y_, th_, previous_v_, prev_x_, prev_y_, prev_th_;
   rclcpp::Time last_time_;
+  std::array<double, 36> pose_covariance_;
+  std::array<double, 36> twist_covariance_;
 
   OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 };

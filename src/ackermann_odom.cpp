@@ -22,6 +22,7 @@ void AckermannOdom::declare_parameters()
     this->declare_parameter("track_width", 0.2360);
     this->declare_parameter("conversion_ratio", 120.0);
     this->declare_parameter("encoder_resolution", 16.0);
+    
 }
 
 void AckermannOdom::initialize_parameters()
@@ -50,7 +51,7 @@ void AckermannOdom::initialize_publishers_and_subscribers()
 
     sync_ = std::make_shared<message_filters::Synchronizer<
             message_filters::sync_policies::ApproximateTime<
-                sensor_msgs::msg::JointState, 
+                sensodr_msgs::msg::JointState, 
                 sensor_msgs::msg::JointState,
                 ackermann_odom::msg::Float32Stamped, 
                 sensor_msgs::msg::Imu
@@ -79,6 +80,11 @@ void AckermannOdom::initialize_publishers_and_subscribers()
     th_ = 0.0;
     previous_v_ = 0.0;
     last_time_ = this->get_clock()->now();
+    prev_x_ = 0.0;
+    prev_y_ = 0.0;
+    prev_th_ = 0.0;
+    pose_covariance_.fill(0.0);
+    twist_covariance_.fill(0.0);
 }
 
 void AckermannOdom::steeringCallback(const std_msgs::msg::Float32::SharedPtr msg)
@@ -223,8 +229,24 @@ void AckermannOdom::updateOdometry(
     
     th_ = std::atan2(std::sin(th_), std::cos(th_));
     elapsed_time_ += dt;
-
     th_ = std::atan2(std::sin(th_), std::cos(th_));
+
+    // Calculate covariance
+    double distance_traveled = std::hypot(x_ - prev_x_, y_ - prev_y_);
+    double angle_rotated = std::abs(th_ - prev_th_);
+
+    // Update pose covariance
+    pose_covariance_[0] = pose_covariance_[7] = 0.01 * distance_traveled;  // x, y
+    pose_covariance_[35] = 0.01 * angle_rotated;  // yaw
+
+    // Update twist covariance
+    twist_covariance_[0] = twist_covariance_[7] = 0.01 * std::abs(previous_v_);  // vx, vy
+    twist_covariance_[35] = 0.01 * std::abs(previous_v_ * std::tan(th_) / wheelbase_);  // omega
+
+    // Update previous pose for next iteration
+    prev_x_ = x_;
+    prev_y_ = y_;
+    prev_th_ = th_;
 
 	RCLCPP_INFO(this->get_logger(), "v_left: %.5f, v_right: %.5f", v_left, v_right);
 	RCLCPP_INFO(this->get_logger(), "dx: %.5f, dy: %.5f, dth: %.5f", dx, dy, dth);
@@ -237,8 +259,14 @@ void AckermannOdom::updateOdometry(
         x_, y_, th_, v, delta);
 }
 
-void AckermannOdom::publishOdometry()
-{
+void AckermannOdom::publishOdometry() {
+    const double POS_COV_FACTOR = 0.05;
+    const double YAW_COV_FACTOR = 0.1;
+    const double VEL_COV_FACTOR = 0.1;
+    const double OMEGA_COV_FACTOR = 0.2;
+    double encoder_uncertainty = 0.01; // Adjust based on your encoder's specifications
+    double imu_angular_uncertainty = 0.005; // Adjust based on your IMU's specifications
+
     auto odom = nav_msgs::msg::Odometry();
     odom.header.stamp = this->get_clock()->now();
     odom.header.frame_id = "odom";
@@ -248,26 +276,19 @@ void AckermannOdom::publishOdometry()
     odom.twist.twist.linear.y = previous_v_ * std::sin(th_);
     odom.twist.twist.angular.z = previous_v_ * std::tan(th_) / wheelbase_;
 
-    odom.pose.pose.position.x = x_;
-    odom.pose.pose.position.y = y_;
-    tf2::Quaternion quat_tf;
-    quat_tf.setRPY(0.0, 0.0, th_);
-    quat_tf.normalize();    
-    odom.pose.pose.orientation.x = quat_tf.getX();
-    odom.pose.pose.orientation.y = quat_tf.getY();
-    odom.pose.pose.orientation.z = quat_tf.getZ();
-    odom.pose.pose.orientation.w = quat_tf.getW();
+    double distance_traveled = std::hypot(x_ - prev_x_, y_ - prev_y_);
+    double angle_rotated = std::abs(th_ - prev_th_);
+    double linear_velocity = std::abs(previous_v_);
+    double angular_velocity = std::abs(previous_v_ * std::tan(th_) / wheelbase_);
 
-    // Set covariances
-    for (int i = 0; i < 36; i++) {
-        odom.pose.covariance[i] = 0.0;
-        odom.twist.covariance[i] = 0.0;
-    }
-    odom.pose.covariance[0] = odom.pose.covariance[7] = odom.pose.covariance[35] = 0.01;
-    odom.twist.covariance[0] = odom.twist.covariance[7] = odom.twist.covariance[35] = 0.01;
+
+    // Set pre-calculated covariances
+    std::copy(pose_covariance_.begin(), pose_covariance_.end(), odom.pose.covariance.begin());
+    std::copy(twist_covariance_.begin(), twist_covariance_.end(), odom.twist.covariance.begin());
 
     publisher_->publish(odom);
 }
+
 
 rcl_interfaces::msg::SetParametersResult AckermannOdom::parametersCallback(
     const std::vector<rclcpp::Parameter> & parameters)
